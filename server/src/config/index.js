@@ -1,4 +1,5 @@
-require('dotenv').config();
+// Environment variables are loaded in index.js entry point
+// This file only exports configuration values
 
 module.exports = {
   port: process.env.PORT || 5000,

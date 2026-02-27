@@ -1,4 +1,8 @@
-require('dotenv').config();
+// Load environment variables from .env file (development only)
+// Production: env vars are set directly via hosting platform (Render)
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 
 const express = require('express');
 const cors = require('cors');
