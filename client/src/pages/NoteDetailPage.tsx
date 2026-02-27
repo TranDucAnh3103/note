@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/AlertDialog";
-import { formatSmartDate } from "@/utils";
+import { formatSmartDate, linkifyText } from "@/utils";
 import { cn } from "@/lib/utils";
 
 export default function NoteDetailPage() {
@@ -229,7 +229,7 @@ export default function NoteDetailPage() {
             )}
           >
             <pre className="whitespace-pre-wrap font-sans text-foreground bg-transparent p-0 overflow-visible">
-              {note.content}
+              {linkifyText(note.content)}
             </pre>
           </div>
         ) : (
