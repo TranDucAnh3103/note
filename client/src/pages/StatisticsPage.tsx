@@ -7,7 +7,6 @@ import {
   Pin,
   Archive,
   Calendar,
-  TrendingUp,
 } from "lucide-react";
 import { useNotes, useFolders, useTags } from "@/hooks";
 import {
@@ -26,18 +25,28 @@ export default function StatisticsPage() {
     limit: 1000,
     isArchived: true,
   });
+  // Fetch pinned notes count
+  const { data: pinnedNotesData } = useNotes({
+    limit: 1,
+    isPinned: true,
+  });
   const { data: folders } = useFolders();
   const { data: tags } = useTags();
 
   const activeNotes = activeNotesData?.notes || [];
   const archivedNotesList = archivedNotesData?.notes || [];
 
-  // Combine both for total count calculations
+  // Use pagination.total for accurate counts
+  const totalActiveNotes = activeNotesData?.pagination?.total || 0;
+  const totalArchivedNotes = archivedNotesData?.pagination?.total || 0;
+  const totalPinnedNotes = pinnedNotesData?.pagination?.total || 0;
+
+  // Combine both for chart calculations
   const allNotes = [...activeNotes, ...archivedNotesList];
 
-  const totalNotes = allNotes.length;
-  const pinnedNotes = activeNotes.filter((n) => n.isPinned).length;
-  const archivedNotes = archivedNotesList.length;
+  const totalNotes = totalActiveNotes + totalArchivedNotes;
+  const pinnedNotes = totalPinnedNotes;
+  const archivedNotes = totalArchivedNotes;
   const totalFolders = folders?.length || 0;
   const totalTags = tags?.length || 0;
 
@@ -71,17 +80,6 @@ export default function StatisticsPage() {
       notesByMonth[monthKey]++;
     }
   });
-
-  // Most used tags - using all notes
-  const tagCounts: Record<string, number> = {};
-  allNotes.forEach((note) => {
-    note.tags.forEach((tag) => {
-      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-    });
-  });
-  const topTags = Object.entries(tagCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10);
 
   const stats = [
     {
@@ -236,42 +234,6 @@ export default function StatisticsPage() {
               <p className="text-muted-foreground text-sm">
                 Chưa có thư mục nào
               </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Top Tags */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Thẻ phổ biến
-            </CardTitle>
-            <CardDescription>
-              Top 10 thẻ được sử dụng nhiều nhất
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {topTags.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {topTags.map(([tag, count], index) => (
-                  <motion.div
-                    key={tag}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary"
-                  >
-                    <Tag className="h-3 w-3" />
-                    <span className="text-sm font-medium">{tag}</span>
-                    <span className="text-xs bg-primary/20 rounded-full px-1.5">
-                      {count}
-                    </span>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">Chưa có thẻ nào</p>
             )}
           </CardContent>
         </Card>
