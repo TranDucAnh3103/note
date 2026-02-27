@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -19,6 +20,16 @@ import {
 } from "@/hooks";
 import { useNoteModalStore } from "@/store";
 import { Button, Badge, LoadingScreen } from "@/components/ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/AlertDialog";
 import { formatSmartDate } from "@/utils";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +41,7 @@ export default function NoteDetailPage() {
   const togglePin = useTogglePin();
   const toggleArchive = useToggleArchive();
   const deleteNote = useDeleteNote();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   if (isLoading) {
     return <LoadingScreen text="Loading note..." />;
@@ -51,15 +63,40 @@ export default function NoteDetailPage() {
   }
 
   const handleDelete = () => {
-    if (confirm("Are you sure you want to delete this note?")) {
-      deleteNote.mutate(note._id, {
-        onSuccess: () => navigate("/notes"),
-      });
-    }
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = () => {
+    deleteNote.mutate(note._id, {
+      onSuccess: () => navigate("/notes"),
+    });
+    setShowDeleteDialog(false);
   };
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa ghi chú?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa "{note.title}"? Hành động này không thể
+              hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

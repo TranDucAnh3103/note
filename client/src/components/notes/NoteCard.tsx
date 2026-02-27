@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -23,6 +23,16 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/DropdownMenu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/AlertDialog";
 import {
   useTogglePin,
   useToggleArchive,
@@ -77,6 +87,7 @@ const NoteCard = memo(function NoteCard({
   const toggleArchive = useToggleArchive();
   const deleteNote = useDeleteNote();
   const createNote = useCreateNote();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Duplicate note
   const handleDuplicate = async (e: React.MouseEvent) => {
@@ -143,9 +154,12 @@ const NoteCard = memo(function NoteCard({
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (confirm("Bạn có chắc chắn muốn xóa ghi chú này?")) {
-      deleteNote.mutate(note._id);
-    }
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = () => {
+    deleteNote.mutate(note._id);
+    setShowDeleteDialog(false);
   };
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -160,16 +174,160 @@ const NoteCard = memo(function NoteCard({
   // Compact view
   if (viewMode === "compact") {
     return (
+      <>
+        {/* Delete confirmation dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xóa ghi chú?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bạn có chắc chắn muốn xóa "{note.title}"? Hành động này không
+                thể hoàn tác.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Hủy</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Xóa
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 10 }}
+          transition={{ duration: 0.15 }}
+        >
+          <Link to={`/notes/${note._id}`}>
+            <div
+              className={cn(
+                "group flex items-center gap-3 rounded-lg border bg-card p-3 transition-all hover:shadow-sm",
+                isActive && "ring-2 ring-primary",
+                note.color && "border-transparent",
+              )}
+              style={cardStyle}
+            >
+              {/* Pin indicator */}
+              {note.isPinned && (
+                <Pin className="h-4 w-4 text-primary fill-current shrink-0" />
+              )}
+
+              {/* Title */}
+              <h3
+                className={cn(
+                  "font-medium text-sm flex-1 truncate",
+                  note.color ? "text-gray-900" : "text-card-foreground",
+                )}
+              >
+                {highlightText(
+                  note.title,
+                  searchQuery,
+                  settings.highlightColor,
+                )}
+              </h3>
+
+              {/* Tags (max 2) */}
+              <div className="hidden sm:flex gap-1 shrink-0">
+                {note.tags.slice(0, 2).map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+
+              {/* Date */}
+              <span
+                className={cn(
+                  "text-xs shrink-0",
+                  note.color ? "text-gray-500" : "text-muted-foreground",
+                )}
+              >
+                {formatSmartDate(note.updatedAt)}
+              </span>
+
+              {/* Actions menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleEdit}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Chỉnh sửa
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleTogglePin}>
+                    <Pin className="h-4 w-4 mr-2" />
+                    {note.isPinned ? "Bỏ ghim" : "Ghim"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleToggleArchive}>
+                    <Archive className="h-4 w-4 mr-2" />
+                    {note.isArchived ? "Bỏ lưu trữ" : "Lưu trữ"}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleDelete}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Xóa
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </Link>
+        </motion.div>
+      </>
+    );
+  }
+
+  // Grid view (default)
+  return (
+    <>
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa ghi chú?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa "{note.title}"? Hành động này không thể
+              hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <motion.div
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 10 }}
-        transition={{ duration: 0.15 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        whileHover={{ scale: 1.02 }}
+        transition={{ duration: 0.2 }}
       >
         <Link to={`/notes/${note._id}`}>
           <div
             className={cn(
-              "group flex items-center gap-3 rounded-lg border bg-card p-3 transition-all hover:shadow-sm",
+              "group relative rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md",
               isActive && "ring-2 ring-primary",
               note.color && "border-transparent",
             )}
@@ -177,238 +335,150 @@ const NoteCard = memo(function NoteCard({
           >
             {/* Pin indicator */}
             {note.isPinned && (
-              <Pin className="h-4 w-4 text-primary fill-current shrink-0" />
+              <div className="absolute -top-2 -right-2">
+                <div className="rounded-full bg-primary p-1.5 shadow-sm">
+                  <Pin className="h-3 w-3 text-primary-foreground fill-current" />
+                </div>
+              </div>
             )}
 
-            {/* Title */}
-            <h3
-              className={cn(
-                "font-medium text-sm flex-1 truncate",
-                note.color ? "text-gray-900" : "text-card-foreground",
-              )}
-            >
-              {highlightText(note.title, searchQuery, settings.highlightColor)}
-            </h3>
+            {/* Header */}
+            <div className="flex items-start justify-between mb-2">
+              <h3
+                className={cn(
+                  "font-semibold text-base line-clamp-2 flex-1 mr-2",
+                  note.color ? "text-gray-900" : "text-card-foreground",
+                )}
+              >
+                {highlightText(
+                  note.title,
+                  searchQuery,
+                  settings.highlightColor,
+                )}
+              </h3>
 
-            {/* Tags (max 2) */}
-            <div className="hidden sm:flex gap-1 shrink-0">
-              {note.tags.slice(0, 2).map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
+              {/* Actions menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleEdit}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Chỉnh sửa
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleTogglePin}>
+                    <Pin className="h-4 w-4 mr-2" />
+                    {note.isPinned ? "Bỏ ghim" : "Ghim"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleToggleArchive}>
+                    <Archive className="h-4 w-4 mr-2" />
+                    {note.isArchived ? "Bỏ lưu trữ" : "Lưu trữ"}
+                  </DropdownMenuItem>
+                  {onMoveToFolder && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onMoveToFolder(note._id);
+                      }}
+                    >
+                      <FolderInput className="h-4 w-4 mr-2" />
+                      Di chuyển
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleDuplicate}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Nhân bản
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleCopy}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Sao chép
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExport}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Tải TXT
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleDelete}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Xóa
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
-            {/* Date */}
-            <span
+            {/* Content preview */}
+            <p
               className={cn(
-                "text-xs shrink-0",
-                note.color ? "text-gray-500" : "text-muted-foreground",
+                "text-sm mb-3 line-clamp-3",
+                note.color ? "text-gray-700" : "text-muted-foreground",
               )}
             >
-              {formatSmartDate(note.updatedAt)}
-            </span>
+              {highlightText(
+                truncate(note.content || "Không có nội dung", 150),
+                searchQuery,
+                settings.highlightColor,
+              )}
+            </p>
 
-            {/* Actions menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                  onClick={(e) => e.preventDefault()}
+            {/* Footer */}
+            <div className="flex items-center justify-between">
+              {/* Tags */}
+              <div className="flex flex-wrap gap-1">
+                {note.tags.slice(0, 3).map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+                {note.tags.length > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{note.tags.length - 3}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Date */}
+              <span
+                className={cn(
+                  "text-xs",
+                  note.color ? "text-gray-500" : "text-muted-foreground",
+                )}
+              >
+                {formatSmartDate(note.updatedAt)}
+              </span>
+            </div>
+
+            {/* Folder badge */}
+            {note.folderId && typeof note.folderId === "object" && (
+              <div className="mt-2 pt-2 border-t border-current/10">
+                <span
+                  className="inline-flex items-center text-xs"
+                  style={{ color: note.folderId.color }}
                 >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleEdit}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Chỉnh sửa
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleTogglePin}>
-                  <Pin className="h-4 w-4 mr-2" />
-                  {note.isPinned ? "Bỏ ghim" : "Ghim"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleToggleArchive}>
-                  <Archive className="h-4 w-4 mr-2" />
-                  {note.isArchived ? "Bỏ lưu trữ" : "Lưu trữ"}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleDelete}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Xóa
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <span
+                    className="w-2 h-2 rounded-full mr-1.5"
+                    style={{ backgroundColor: note.folderId.color }}
+                  />
+                  {note.folderId.name}
+                </span>
+              </div>
+            )}
           </div>
         </Link>
       </motion.div>
-    );
-  }
-
-  // Grid view (default)
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      whileHover={{ scale: 1.02 }}
-      transition={{ duration: 0.2 }}
-    >
-      <Link to={`/notes/${note._id}`}>
-        <div
-          className={cn(
-            "group relative rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md",
-            isActive && "ring-2 ring-primary",
-            note.color && "border-transparent",
-          )}
-          style={cardStyle}
-        >
-          {/* Pin indicator */}
-          {note.isPinned && (
-            <div className="absolute -top-2 -right-2">
-              <div className="rounded-full bg-primary p-1.5 shadow-sm">
-                <Pin className="h-3 w-3 text-primary-foreground fill-current" />
-              </div>
-            </div>
-          )}
-
-          {/* Header */}
-          <div className="flex items-start justify-between mb-2">
-            <h3
-              className={cn(
-                "font-semibold text-base line-clamp-2 flex-1 mr-2",
-                note.color ? "text-gray-900" : "text-card-foreground",
-              )}
-            >
-              {highlightText(note.title, searchQuery, settings.highlightColor)}
-            </h3>
-
-            {/* Actions menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleEdit}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Chỉnh sửa
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleTogglePin}>
-                  <Pin className="h-4 w-4 mr-2" />
-                  {note.isPinned ? "Bỏ ghim" : "Ghim"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleToggleArchive}>
-                  <Archive className="h-4 w-4 mr-2" />
-                  {note.isArchived ? "Bỏ lưu trữ" : "Lưu trữ"}
-                </DropdownMenuItem>
-                {onMoveToFolder && (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onMoveToFolder(note._id);
-                    }}
-                  >
-                    <FolderInput className="h-4 w-4 mr-2" />
-                    Di chuyển
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleDuplicate}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Nhân bản
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCopy}>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Sao chép
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExport}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Tải TXT
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleDelete}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Xóa
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {/* Content preview */}
-          <p
-            className={cn(
-              "text-sm mb-3 line-clamp-3",
-              note.color ? "text-gray-700" : "text-muted-foreground",
-            )}
-          >
-            {highlightText(
-              truncate(note.content || "Không có nội dung", 150),
-              searchQuery,
-              settings.highlightColor,
-            )}
-          </p>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between">
-            {/* Tags */}
-            <div className="flex flex-wrap gap-1">
-              {note.tags.slice(0, 3).map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
-              {note.tags.length > 3 && (
-                <Badge variant="outline" className="text-xs">
-                  +{note.tags.length - 3}
-                </Badge>
-              )}
-            </div>
-
-            {/* Date */}
-            <span
-              className={cn(
-                "text-xs",
-                note.color ? "text-gray-500" : "text-muted-foreground",
-              )}
-            >
-              {formatSmartDate(note.updatedAt)}
-            </span>
-          </div>
-
-          {/* Folder badge */}
-          {note.folderId && typeof note.folderId === "object" && (
-            <div className="mt-2 pt-2 border-t border-current/10">
-              <span
-                className="inline-flex items-center text-xs"
-                style={{ color: note.folderId.color }}
-              >
-                <span
-                  className="w-2 h-2 rounded-full mr-1.5"
-                  style={{ backgroundColor: note.folderId.color }}
-                />
-                {note.folderId.name}
-              </span>
-            </div>
-          )}
-        </div>
-      </Link>
-    </motion.div>
+    </>
   );
 });
 
