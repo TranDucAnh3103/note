@@ -6,7 +6,7 @@ services:
     plan: free
     branch: main
     rootDir: server
-    buildCommand: npm install
+    buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
