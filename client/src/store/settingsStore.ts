@@ -18,7 +18,7 @@ interface SettingsState {
 }
 
 const defaultSettings: AppSettings = {
-  appName: "NoteSYS",
+  appName: "MemoStack",
   welcomeMessage: "Chào mừng bạn đến với ứng dụng ghi chú!",
   showWelcome: true,
   viewMode: "grid",
