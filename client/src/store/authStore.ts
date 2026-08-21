@@ -11,6 +11,7 @@ export interface User {
     apiKey?: string;
     model?: string;
   };
+  googleId?: string;
 }
 
 interface AuthState {

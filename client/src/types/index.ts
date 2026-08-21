@@ -39,6 +39,8 @@ export interface Note {
   order: number;
   createdAt: string;
   updatedAt: string;
+  isAiProcessed?: boolean;
+  summary?: string;
 }
 
 export interface CreateNoteInput {

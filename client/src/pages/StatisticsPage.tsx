@@ -4,7 +4,6 @@ import {
   FileText,
   FolderOpen,
   Tag,
-  Pin,
   Archive,
   Calendar,
 } from "lucide-react";

@@ -104,7 +104,7 @@ export default function NoteDetailPage() {
     setShowDeleteDialog(false);
   };
 
-  const { updateSettings } = useSettingsStore.getState();
+  // Removed updateSettings destructuring as it is accessed directly on the state
   const pinnedActions = settings.pinnedActions || ["summarize", "edit"];
 
   const handleTogglePinAction = (actionId: string, e: React.MouseEvent) => {

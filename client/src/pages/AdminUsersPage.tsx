@@ -1,4 +1,3 @@
-import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
 import { Users, UserX, UserCheck, Shield } from "lucide-react";
 import { authApi } from "@/api/auth";
@@ -7,7 +6,6 @@ import toast from "react-hot-toast";
 import { useI18n } from "@/hooks";
 
 export default function AdminUsersPage() {
-  const { user: currentUser } = useAuthStore();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useI18n();
