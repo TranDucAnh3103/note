@@ -16,10 +16,18 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Add auth token if available (for future auth implementation)
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Read from zustand persist storage
+    const storage = localStorage.getItem("auth-storage");
+    if (storage) {
+      try {
+        const parsed = JSON.parse(storage);
+        const token = parsed.state?.token;
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      } catch (e) {
+        // ignore parse error
+      }
     }
     return config;
   },

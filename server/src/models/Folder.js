@@ -11,7 +11,7 @@ const folderSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      // Optional for future auth implementation
+      required: true,
     },
     color: {
       type: String,

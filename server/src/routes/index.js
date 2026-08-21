@@ -13,8 +13,14 @@ router.get('/health', (req, res) => {
   });
 });
 
+const authRoutes = require('./authRoutes');
+const aiRoutes = require('./aiRoutes');
+const { protect } = require('../middlewares');
+
 // Mount routes
-router.use('/folders', folderRoutes);
-router.use('/notes', noteRoutes);
+router.use('/auth', authRoutes);
+router.use('/folders', protect, folderRoutes);
+router.use('/notes', protect, noteRoutes);
+router.use('/ai', protect, aiRoutes);
 
 module.exports = router;

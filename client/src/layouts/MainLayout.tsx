@@ -1,8 +1,10 @@
 import { ReactNode } from "react";
 import { Sidebar, Header } from "@/components/layout";
-import { NoteModal } from "@/components/notes";
+import { NoteModal, ImportNoteModal } from "@/components/notes";
 import { FolderModal } from "@/components/folders";
+import { FloatingChat } from "@/components/ui";
 import { useCopyProtection, useKeyboardShortcuts } from "@/hooks";
+import { useSettingsStore } from "@/store/settingsStore";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -14,6 +16,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   // Keyboard shortcuts
   useKeyboardShortcuts();
+
+  const { settings } = useSettingsStore();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -31,7 +35,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       {/* Modals */}
       <NoteModal />
+      <ImportNoteModal />
       <FolderModal />
+      {settings.aiEnabled && <FloatingChat />}
     </div>
   );
 }

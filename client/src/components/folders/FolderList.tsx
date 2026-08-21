@@ -5,6 +5,8 @@ import FolderItem from "./FolderItem";
 import { Button } from "@/components/ui";
 import { useFolderModalStore } from "@/store";
 
+import { useI18n } from "@/hooks";
+
 interface FolderListProps {
   folders: Folder[];
   isLoading?: boolean;
@@ -12,6 +14,7 @@ interface FolderListProps {
 
 export default function FolderList({ folders, isLoading }: FolderListProps) {
   const { openCreateModal } = useFolderModalStore();
+  const { t } = useI18n();
 
   if (isLoading) {
     return (
@@ -27,7 +30,7 @@ export default function FolderList({ folders, isLoading }: FolderListProps) {
     <div className="space-y-1 px-2">
       <div className="flex items-center justify-between px-3 py-2">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Thư mục
+          {t("app.folders")}
         </span>
         <Button
           variant="ghost"

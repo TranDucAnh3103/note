@@ -11,12 +11,15 @@ const morgan = require('morgan');
 const compression = require('compression');
 
 const connectDB = require('./config/db');
+const { initDb } = require('./config/supabase');
 const config = require('./config');
 const routes = require('./routes');
 const { errorHandler, limiter, sanitize } = require('./middlewares');
 
 // Connect to MongoDB
 connectDB();
+// Connect to Supabase
+initDb();
 
 const app = express();
 

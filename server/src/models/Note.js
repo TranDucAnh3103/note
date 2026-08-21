@@ -21,7 +21,15 @@ const noteSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      // Optional for future auth implementation
+      required: true,
+    },
+    summary: {
+      type: String,
+      default: '',
+    },
+    isAiProcessed: {
+      type: Boolean,
+      default: false,
     },
     tags: {
       type: [String],
@@ -48,6 +56,10 @@ const noteSchema = new mongoose.Schema(
     order: {
       type: Number,
       default: 0,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
     },
   },
   {

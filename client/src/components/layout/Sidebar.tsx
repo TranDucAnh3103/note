@@ -8,9 +8,11 @@ import {
   X,
   Settings,
   BarChart3,
+  ShieldCheck,
 } from "lucide-react";
-import { useFolders, useTags, useIsMobile } from "@/hooks";
+import { useFolders, useTags, useIsMobile, useI18n } from "@/hooks";
 import { useSidebarStore } from "@/store";
+import { useAuthStore } from "@/store/authStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { FolderList } from "@/components/folders";
 import { Button } from "@/components/ui";
@@ -23,14 +25,20 @@ export default function Sidebar() {
   const { data: folders, isLoading: foldersLoading } = useFolders();
   const { data: tags } = useTags();
   const isMobile = useIsMobile();
+  const { user } = useAuthStore();
+  const { t } = useI18n();
 
   const navItems = [
-    { path: "/", label: "Trang chủ", icon: Home },
-    { path: "/notes", label: "Tất cả ghi chú", icon: FileText },
-    { path: "/archived", label: "Lưu trữ", icon: Archive },
-    { path: "/statistics", label: "Thống kê", icon: BarChart3 },
-    { path: "/settings", label: "Cài đặt", icon: Settings },
+    { path: "/", label: t("app.home"), icon: Home },
+    { path: "/notes", label: t("app.notes"), icon: FileText },
+    { path: "/archived", label: t("note.archive"), icon: Archive },
+    { path: "/statistics", label: t("app.statistics"), icon: BarChart3 },
+    { path: "/settings", label: t("app.settings"), icon: Settings },
   ];
+
+  if (user?.role === "admin") {
+    navItems.push({ path: "/admin/users", label: "Quản lý Người dùng", icon: ShieldCheck });
+  }
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
@@ -84,7 +92,7 @@ export default function Sidebar() {
           <div className="px-2">
             <div className="flex items-center justify-between px-3 py-2">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Thẻ
+                {t("app.tags")}
               </span>
             </div>
             <div className="flex flex-wrap gap-2 px-3">

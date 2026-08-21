@@ -1,4 +1,5 @@
 const noteService = require('../services/noteService');
+const embeddingService = require('../services/embeddingService');
 const { sendSuccess, sendError } = require('../utils/response');
 
 /**
@@ -7,6 +8,7 @@ const { sendSuccess, sendError } = require('../utils/response');
  */
 exports.getAllNotes = async (req, res, next) => {
   try {
+    req.query.userId = req.user._id.toString();
     const result = await noteService.getAll(req.query);
     sendSuccess(res, result);
   } catch (error) {
@@ -14,173 +16,159 @@ exports.getAllNotes = async (req, res, next) => {
   }
 };
 
-/**
- * @desc    Get note by ID
- * @route   GET /api/notes/:id
- */
 exports.getNoteById = async (req, res, next) => {
   try {
-    const note = await noteService.getById(req.params.id);
-
-    if (!note) {
-      return sendError(res, 'Note not found', 404);
-    }
-
+    const note = await noteService.getById(req.params.id, req.user._id.toString());
+    if (!note) return sendError(res, 'Note not found', 404);
     sendSuccess(res, note);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Create a new note
- * @route   POST /api/notes
- */
 exports.createNote = async (req, res, next) => {
   try {
-    const note = await noteService.create(req.body);
+    const noteData = { ...req.body, userId: req.user._id.toString() };
+    const note = await noteService.create(noteData);
+    
+    // Background vector processing
+    embeddingService.processAndStoreNote(note).catch(err => 
+      console.error('Vector DB error on create:', err.message)
+    );
+    
     sendSuccess(res, note, 201);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Update a note
- * @route   PUT /api/notes/:id
- */
 exports.updateNote = async (req, res, next) => {
   try {
-    const note = await noteService.update(req.params.id, req.body);
-
-    if (!note) {
-      return sendError(res, 'Note not found', 404);
-    }
-
+    const note = await noteService.update(req.params.id, req.user._id.toString(), req.body);
+    if (!note) return sendError(res, 'Note not found', 404);
+    
+    // Background vector processing
+    embeddingService.processAndStoreNote(note).catch(err => 
+      console.error('Vector DB error on update:', err.message)
+    );
+    
     sendSuccess(res, note);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Delete a note
- * @route   DELETE /api/notes/:id
- */
 exports.deleteNote = async (req, res, next) => {
   try {
-    const note = await noteService.delete(req.params.id);
-
-    if (!note) {
-      return sendError(res, 'Note not found', 404);
-    }
-
+    const note = await noteService.delete(req.params.id, req.user._id.toString());
+    if (!note) return sendError(res, 'Note not found', 404);
+    
+    // Background vector deletion
+    embeddingService.deleteNoteEmbeddings(req.params.id).catch(err => 
+      console.error('Vector DB error on delete:', err.message)
+    );
+    
     sendSuccess(res, { message: 'Note deleted successfully' });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Toggle pin status
- * @route   PATCH /api/notes/:id/pin
- */
 exports.togglePin = async (req, res, next) => {
   try {
-    const note = await noteService.togglePin(req.params.id);
-
-    if (!note) {
-      return sendError(res, 'Note not found', 404);
-    }
-
+    const note = await noteService.togglePin(req.params.id, req.user._id.toString());
+    if (!note) return sendError(res, 'Note not found', 404);
     sendSuccess(res, note);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Toggle archive status
- * @route   PATCH /api/notes/:id/archive
- */
 exports.toggleArchive = async (req, res, next) => {
   try {
-    const note = await noteService.toggleArchive(req.params.id);
-
-    if (!note) {
-      return sendError(res, 'Note not found', 404);
-    }
-
+    const note = await noteService.toggleArchive(req.params.id, req.user._id.toString());
+    if (!note) return sendError(res, 'Note not found', 404);
     sendSuccess(res, note);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Get all tags
- * @route   GET /api/notes/tags
- */
 exports.getAllTags = async (req, res, next) => {
   try {
-    const tags = await noteService.getAllTags();
+    const tags = await noteService.getAllTags(req.user._id.toString());
     sendSuccess(res, tags);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Delete a tag from all notes
- * @route   DELETE /api/notes/tags/:tag
- */
 exports.deleteTag = async (req, res, next) => {
   try {
     const { tag } = req.params;
-    const result = await noteService.deleteTag(decodeURIComponent(tag));
+    const result = await noteService.deleteTag(decodeURIComponent(tag), req.user._id.toString());
     sendSuccess(res, result);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Rename a tag globally
- * @route   PATCH /api/notes/tags/rename
- */
 exports.renameTag = async (req, res, next) => {
   try {
     const { oldTag, newTag } = req.body;
-    const result = await noteService.renameTag(oldTag, newTag);
+    const result = await noteService.renameTag(oldTag, newTag, req.user._id.toString());
     sendSuccess(res, result);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Move notes to folder
- * @route   PATCH /api/notes/move
- */
 exports.moveToFolder = async (req, res, next) => {
   try {
     const { noteIds, folderId } = req.body;
-    const notes = await noteService.moveToFolder(noteIds, folderId);
+    const notes = await noteService.moveToFolder(noteIds, folderId, req.user._id.toString());
     sendSuccess(res, notes);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc    Bulk delete notes
- * @route   POST /api/notes/bulk-delete
- */
+exports.restoreNote = async (req, res, next) => {
+  try {
+    const note = await noteService.restore(req.params.id, req.user._id.toString());
+    if (!note) return sendError(res, 'Note not found in trash', 404);
+    
+    sendSuccess(res, note);
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.bulkDelete = async (req, res, next) => {
   try {
     const { noteIds } = req.body;
-    const deletedCount = await noteService.bulkDelete(noteIds);
+    const deletedCount = await noteService.bulkDelete(noteIds, req.user._id.toString());
     sendSuccess(res, { deletedCount });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.emptyTrash = async (req, res, next) => {
+  try {
+    const noteIds = await noteService.emptyTrash(req.user._id.toString());
+    
+    // Delete from pgvector
+    if (noteIds.length > 0) {
+      const embeddingService = require('../services/embeddingService');
+      for (const id of noteIds) {
+        embeddingService.deleteNoteEmbeddings(id).catch(err => 
+          console.error('Vector DB error on delete:', err.message)
+        );
+      }
+    }
+    
+    sendSuccess(res, { deletedCount: noteIds.length });
   } catch (error) {
     next(error);
   }

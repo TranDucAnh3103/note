@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Outlet } from "react-router-dom";
 import { useThemeStore } from "@/store/themeStore";
 import MainLayout from "@/layouts/MainLayout";
 import LoadingScreen from "@/components/ui/LoadingScreen";
@@ -12,6 +12,11 @@ const NoteDetailPage = lazy(() => import("@/pages/NoteDetailPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const StatisticsPage = lazy(() => import("@/pages/StatisticsPage"));
 const TagPage = lazy(() => import("@/pages/TagPage"));
+const AdminUsersPage = lazy(() => import("@/pages/AdminUsersPage"));
+
+const LoginPage = lazy(() => import("@/pages/LoginPage"));
+const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
+import ProtectedRoute from "@/components/layout/ProtectedRoute";
 
 function App() {
   const { isDarkMode } = useThemeStore();
@@ -26,20 +31,26 @@ function App() {
   }, [isDarkMode]);
 
   return (
-    <MainLayout>
-      <Suspense fallback={<LoadingScreen />}>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/notes" element={<NotesPage />} />
-          <Route path="/notes/:id" element={<NoteDetailPage />} />
-          <Route path="/folder/:folderId" element={<NotesPage />} />
-          <Route path="/archived" element={<ArchivedPage />} />
-          <Route path="/tag/:tag" element={<TagPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/statistics" element={<StatisticsPage />} />
-        </Routes>
-      </Suspense>
-    </MainLayout>
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        
+        <Route element={<ProtectedRoute />}>
+          <Route element={<MainLayout><Outlet /></MainLayout>}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/notes" element={<NotesPage />} />
+            <Route path="/notes/:id" element={<NoteDetailPage />} />
+            <Route path="/folder/:folderId" element={<NotesPage />} />
+            <Route path="/archived" element={<ArchivedPage />} />
+            <Route path="/tag/:tag" element={<TagPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/statistics" element={<StatisticsPage />} />
+            <Route path="/admin/users" element={<AdminUsersPage />} />
+          </Route>
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }
 

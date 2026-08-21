@@ -116,4 +116,21 @@ export const noteApi = {
     >("/notes/bulk-delete", { noteIds });
     return response.data;
   },
+
+  // Empty trash
+  emptyTrash: async (): Promise<{ deletedCount: number }> => {
+    const response = await api.delete<
+      never,
+      ApiResponse<{ deletedCount: number }>
+    >("/notes/trash/empty");
+    return response.data;
+  },
+
+  // Restore note
+  restore: async (id: string): Promise<Note> => {
+    const response = await api.patch<never, ApiResponse<Note>>(
+      `/notes/${id}/restore`,
+    );
+    return response.data;
+  },
 };

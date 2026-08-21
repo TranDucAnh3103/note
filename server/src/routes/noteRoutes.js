@@ -12,6 +12,9 @@ const {
 // GET /api/notes/tags - Get all tags (must be before /:id)
 router.get('/tags', noteController.getAllTags);
 
+// DELETE /api/notes/trash/empty - Empty trash
+router.delete('/trash/empty', noteController.emptyTrash);
+
 // DELETE /api/notes/tags/:tag - Delete a tag from all notes
 router.delete('/tags/:tag', noteController.deleteTag);
 
@@ -43,6 +46,9 @@ router.patch(
   validate,
   noteController.toggleArchive
 );
+
+// PATCH /api/notes/:id/restore - Restore a soft-deleted note
+router.patch('/:id/restore', noteIdValidation, validate, noteController.restoreNote);
 
 // PATCH /api/notes/move - Move notes to folder
 router.patch('/move', noteController.moveToFolder);

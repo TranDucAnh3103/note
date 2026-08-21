@@ -10,3 +10,4 @@ export * from "./DropdownMenu";
 export * from "./AlertDialog";
 export { default as LoadingScreen } from "./LoadingScreen";
 export { default as EmptyState } from "./EmptyState";
+export { default as FloatingChat } from "./FloatingChat";

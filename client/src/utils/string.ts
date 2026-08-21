@@ -35,7 +35,7 @@ export const highlightText = (text: string, query: string): string => {
 };
 
 // URL regex pattern to detect links
-const URL_REGEX = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/gi;
+const URL_REGEX = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/gi;
 
 /**
  * Convert text containing URLs into React elements with clickable links

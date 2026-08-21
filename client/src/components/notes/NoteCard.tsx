@@ -13,7 +13,7 @@ import {
   FileText,
 } from "lucide-react";
 import { Note } from "@/types";
-import { formatSmartDate, truncate } from "@/utils";
+import { formatSmartDate, truncate, exportAsTxt, exportAsMd } from "@/utils";
 import { cn } from "@/lib/utils";
 import { Badge, Button } from "@/components/ui";
 import {
@@ -123,20 +123,17 @@ const NoteCard = memo(function NoteCard({
   };
 
   // Export as TXT
-  const handleExport = (e: React.MouseEvent) => {
+  const handleExportTxt = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const content = `${note.title}\n${"-".repeat(note.title.length)}\n\n${note.content || ""}\n\n---\nThẻ: ${note.tags.join(", ") || "Không có"}\nCập nhật: ${new Date(note.updatedAt).toLocaleString("vi-VN")}`;
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${note.title.replace(/[^a-zA-Z0-9\u00C0-\u1EF9\s]/g, "")}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success("Đã tải xuống file TXT");
+    exportAsTxt(note);
+  };
+
+  // Export as MD
+  const handleExportMd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    exportAsMd(note);
   };
 
   const handleTogglePin = (e: React.MouseEvent) => {
@@ -403,9 +400,13 @@ const NoteCard = memo(function NoteCard({
                     <Copy className="h-4 w-4 mr-2" />
                     Sao chép
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleExport}>
+                  <DropdownMenuItem onClick={handleExportTxt}>
                     <Download className="h-4 w-4 mr-2" />
                     Tải TXT
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportMd}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Tải Markdown
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { useNoteModalStore } from "@/store";
+import { useNavigate, useLocation, matchPath } from "react-router-dom";
+import { useNoteModalStore, useSidebarStore, useThemeStore, useImportModalStore, useSettingsStore } from "@/store";
 
 interface KeyboardShortcut {
   key: string;
@@ -16,7 +16,11 @@ interface KeyboardShortcut {
  */
 export const useKeyboardShortcuts = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { openCreateModal } = useNoteModalStore();
+  const { openModal: openImportModal } = useImportModalStore();
+  const { toggleSidebar } = useSidebarStore();
+  const { toggleTheme } = useThemeStore();
 
   const focusSearch = useCallback(() => {
     const searchInput = document.querySelector<HTMLInputElement>(
@@ -27,29 +31,34 @@ export const useKeyboardShortcuts = () => {
     }
   }, []);
 
+  const match = matchPath("/folder/:folderId", location.pathname);
+  const { settings } = useSettingsStore();
+
+  const parseShortcutStr = (str: string, action: () => void, description: string): KeyboardShortcut => {
+    const parts = str.toLowerCase().split("+");
+    return {
+      key: parts[parts.length - 1],
+      ctrl: parts.includes("ctrl"),
+      shift: parts.includes("shift"),
+      alt: parts.includes("alt"),
+      action,
+      description,
+    };
+  };
+
+  const currentFolderId = match?.params?.folderId || null;
+
   const shortcuts: KeyboardShortcut[] = [
-    {
-      key: "n",
-      ctrl: true,
-      action: () => openCreateModal(),
-      description: "Tạo ghi chú mới",
-    },
-    {
-      key: "k",
-      ctrl: true,
-      action: focusSearch,
-      description: "Tìm kiếm",
-    },
+    parseShortcutStr(settings.shortcuts?.CREATE_NOTE || "Alt+N", () => openCreateModal(currentFolderId), "Tạo ghi chú mới"),
+    parseShortcutStr(settings.shortcuts?.SEARCH || "Alt+F", focusSearch, "Tìm kiếm"),
+    parseShortcutStr(settings.shortcuts?.TOGGLE_SIDEBAR || "Alt+B", toggleSidebar, "Mở/đóng sidebar"),
+    parseShortcutStr(settings.shortcuts?.TOGGLE_THEME || "Alt+D", toggleTheme, "Chuyển đổi chế độ sáng/tối"),
+    parseShortcutStr(settings.shortcuts?.IMPORT || "Alt+I", () => openImportModal(currentFolderId), "Nhập file"),
+    parseShortcutStr(settings.shortcuts?.GO_HOME || "Alt+H", () => navigate("/"), "Về trang chủ"),
     {
       key: "/",
       action: focusSearch,
-      description: "Tìm kiếm (phím tắt)",
-    },
-    {
-      key: "h",
-      ctrl: true,
-      action: () => navigate("/"),
-      description: "Về trang chủ",
+      description: "Tìm kiếm (phím tắt /)",
     },
   ];
 

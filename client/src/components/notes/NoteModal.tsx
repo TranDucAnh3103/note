@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { X, Hash, Plus } from "lucide-react";
+import { X, Hash, Plus, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -232,7 +232,7 @@ export default function NoteModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={closeModal}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[70vw] lg:max-w-[65vw] min-h-[60vh] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {mode === "edit" ? "Chỉnh sửa ghi chú" : "Tạo ghi chú mới"}
@@ -257,10 +257,36 @@ export default function NoteModal() {
 
           {/* Content - with dynamic color */}
           <div>
+            <div className="flex justify-between items-end mb-2">
+              <label className="text-sm font-medium">Nội dung</label>
+              {settings.aiEnabled && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1 border-purple-500 text-purple-600 hover:bg-purple-50"
+                  onClick={async () => {
+                    if (!watchedContent.trim()) return;
+                    try {
+                      const { aiApi } = await import("@/api/ai");
+                      const res: any = await aiApi.formatText(watchedContent);
+                      if (res.success) {
+                        setValue("content", res.data.formattedContent);
+                      }
+                    } catch (err) {
+                      // Ignore or show toast
+                    }
+                  }}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  AI Format
+                </Button>
+              )}
+            </div>
             <Textarea
               {...register("content")}
               placeholder="Viết nội dung ghi chú của bạn..."
-              className="min-h-[200px] resize-y note-content transition-colors duration-200"
+              className="min-h-[35vh] resize-y note-content transition-colors duration-200"
               style={{
                 backgroundColor: watchedColor ? `${watchedColor}60` : undefined,
               }}

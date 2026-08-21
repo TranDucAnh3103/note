@@ -1,80 +1,92 @@
 const Folder = require('../models/Folder');
+const mongoose = require('mongoose');
 
 class FolderService {
-  /**
-   * Get all folders
-   */
   async getAll(query = {}) {
-    const { sort = 'order', order = 'asc' } = query;
+    const { sort = 'order', order = 'asc', userId } = query;
     
     const sortOptions = {};
     sortOptions[sort] = order === 'asc' ? 1 : -1;
 
-    const folders = await Folder.find()
-      .populate('notesCount')
-      .sort(sortOptions)
-      .lean();
+    const filter = userId ? { userId: new mongoose.Types.ObjectId(userId) } : {};
 
-    return folders;
+    const folders = await Folder.aggregate([
+      { $match: filter },
+      {
+        $lookup: {
+          from: 'notes',
+          let: { folderId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$folderId', '$$folderId'] },
+                    { $eq: ['$userId', new mongoose.Types.ObjectId(userId)] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: 'notes'
+        }
+      },
+      {
+        $addFields: {
+          notesCount: { $size: '$notes' }
+        }
+      },
+      { $project: { notes: 0 } },
+      { $sort: sortOptions }
+    ]);
+
+    // Format id to _id string for frontend consistency
+    return folders.map(f => {
+      f.id = f._id.toString();
+      return f;
+    });
   }
 
-  /**
-   * Get folder by ID
-   */
-  async getById(id) {
-    const folder = await Folder.findById(id).populate('notesCount').lean();
+  async getById(id, userId) {
+    const filter = { _id: id };
+    if (userId) filter.userId = userId;
+
+    const folder = await Folder.findOne(filter).populate('notesCount').lean();
     return folder;
   }
 
-  /**
-   * Create a new folder
-   */
   async create(data) {
     const folder = new Folder(data);
     await folder.save();
-    
-    // Return with virtual populated
-    return this.getById(folder._id);
+    return this.getById(folder._id, data.userId);
   }
 
-  /**
-   * Update a folder
-   */
-  async update(id, data) {
-    const folder = await Folder.findByIdAndUpdate(
-      id,
+  async update(id, userId, data) {
+    const folder = await Folder.findOneAndUpdate(
+      { _id: id, userId },
       { $set: data },
       { new: true, runValidators: true }
     );
 
-    if (!folder) {
-      return null;
-    }
-
-    return this.getById(folder._id);
+    if (!folder) return null;
+    return this.getById(folder._id, userId);
   }
 
-  /**
-   * Delete a folder
-   */
-  async delete(id) {
-    const folder = await Folder.findByIdAndDelete(id);
+  async delete(id, userId) {
+    const folder = await Folder.findOneAndDelete({ _id: id, userId });
     return folder;
   }
 
-  /**
-   * Reorder folders
-   */
-  async reorder(folderOrders) {
+  async reorder(folderOrders, userId) {
     const bulkOps = folderOrders.map(({ id, order }) => ({
       updateOne: {
-        filter: { _id: id },
+        filter: { _id: id, userId },
         update: { $set: { order } },
       },
     }));
 
     await Folder.bulkWrite(bulkOps);
-    return this.getAll();
+    return this.getAll({ userId });
   }
 }
 

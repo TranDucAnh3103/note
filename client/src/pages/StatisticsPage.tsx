@@ -15,23 +15,19 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  LoadingScreen,
 } from "@/components/ui";
+import { useI18n } from "@/hooks";
 
 export default function StatisticsPage() {
+  const { t } = useI18n();
   // Fetch active notes (not archived)
-  const { data: activeNotesData } = useNotes({ limit: 1000 });
-  // Fetch archived notes separately
-  const { data: archivedNotesData } = useNotes({
-    limit: 1000,
-    isArchived: true,
-  });
-  // Fetch pinned notes count
-  const { data: pinnedNotesData } = useNotes({
-    limit: 1,
-    isPinned: true,
-  });
-  const { data: folders } = useFolders();
-  const { data: tags } = useTags();
+  const { data: activeNotesData, isLoading: activeLoading } = useNotes({ limit: 5000 });
+  const { data: archivedNotesData, isLoading: archivedLoading } = useNotes({ limit: 5000, isArchived: true });
+  const { data: folders, isLoading: foldersLoading } = useFolders();
+  const { data: tags, isLoading: tagsLoading } = useTags();
+
+  const isLoading = activeLoading || archivedLoading || foldersLoading || tagsLoading;
 
   const activeNotes = activeNotesData?.notes || [];
   const archivedNotesList = archivedNotesData?.notes || [];
@@ -39,13 +35,11 @@ export default function StatisticsPage() {
   // Use pagination.total for accurate counts
   const totalActiveNotes = activeNotesData?.pagination?.total || 0;
   const totalArchivedNotes = archivedNotesData?.pagination?.total || 0;
-  const totalPinnedNotes = pinnedNotesData?.pagination?.total || 0;
 
   // Combine both for chart calculations
   const allNotes = [...activeNotes, ...archivedNotesList];
 
   const totalNotes = totalActiveNotes + totalArchivedNotes;
-  const pinnedNotes = totalPinnedNotes;
   const archivedNotes = totalArchivedNotes;
   const totalFolders = folders?.length || 0;
   const totalTags = tags?.length || 0;
@@ -58,12 +52,14 @@ export default function StatisticsPage() {
       color: folder.color,
     })) || [];
 
-  // Calculate notes by month (last 6 months) - using all notes
+  // Calculate notes per month for chart
   const notesByMonth: Record<string, number> = {};
-  const now = new Date();
+
+  // Initialize last 6 months
   for (let i = 5; i >= 0; i--) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthKey = date.toLocaleDateString("vi-VN", {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const monthKey = d.toLocaleDateString("vi-VN", {
       month: "short",
       year: "numeric",
     });
@@ -83,31 +79,25 @@ export default function StatisticsPage() {
 
   const stats = [
     {
-      label: "Tổng ghi chú",
+      label: t("app.notes"),
       value: totalNotes,
       icon: FileText,
       color: "bg-blue-500",
     },
     {
-      label: "Đã ghim",
-      value: pinnedNotes,
-      icon: Pin,
-      color: "bg-yellow-500",
-    },
-    {
-      label: "Lưu trữ",
+      label: t("note.archive"),
       value: archivedNotes,
       icon: Archive,
       color: "bg-gray-500",
     },
     {
-      label: "Thư mục",
+      label: t("app.folders"),
       value: totalFolders,
       icon: FolderOpen,
       color: "bg-green-500",
     },
     {
-      label: "Thẻ",
+      label: t("app.tags"),
       value: totalTags,
       icon: Tag,
       color: "bg-purple-500",
@@ -117,6 +107,10 @@ export default function StatisticsPage() {
   const maxNoteCount = Math.max(...Object.values(notesByMonth), 1);
   const maxFolderCount = Math.max(...notesPerFolder.map((f) => f.count), 1);
 
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -125,7 +119,7 @@ export default function StatisticsPage() {
     >
       <div className="flex items-center gap-3 mb-6">
         <BarChart3 className="h-8 w-8 text-primary" />
-        <h1 className="text-2xl md:text-3xl font-bold">Thống kê</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">{t("app.statistics")}</h1>
       </div>
 
       {/* Overview Stats */}

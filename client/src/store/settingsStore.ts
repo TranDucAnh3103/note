@@ -9,6 +9,10 @@ interface AppSettings {
   highlightColor: string;
   autoSave: boolean;
   autoSaveDelay: number;
+  aiEnabled: boolean;
+  language: "vi" | "en";
+  pinnedActions: string[];
+  shortcuts: Record<string, string>;
 }
 
 interface SettingsState {
@@ -19,12 +23,23 @@ interface SettingsState {
 
 const defaultSettings: AppSettings = {
   appName: "MemoStack",
-  welcomeMessage: "Chào mừng bạn đến với ứng dụng ghi chú!",
+  welcomeMessage: "Bắt đầu ghi lại suy nghĩ, kế hoạch và cảm hứng của bạn ngay hôm nay.",
   showWelcome: true,
   viewMode: "grid",
   highlightColor: "#fef08a",
   autoSave: true,
-  autoSaveDelay: 2000,
+  autoSaveDelay: 30000,
+  aiEnabled: true,
+  language: "vi",
+  pinnedActions: ["summarize", "edit"],
+  shortcuts: {
+    CREATE_NOTE: "Alt+N",
+    SEARCH: "Alt+F",
+    TOGGLE_SIDEBAR: "Alt+B",
+    TOGGLE_THEME: "Alt+D",
+    IMPORT: "Alt+I",
+    GO_HOME: "Alt+H",
+  },
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -39,6 +54,18 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "notesys-settings",
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        ...persistedState,
+        settings: {
+          ...currentState.settings,
+          ...(persistedState?.settings || {}),
+          shortcuts: {
+            ...currentState.settings.shortcuts,
+            ...(persistedState?.settings?.shortcuts || {}),
+          },
+        },
+      }),
     },
   ),
 );

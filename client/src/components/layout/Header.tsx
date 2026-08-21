@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useLocation, matchPath } from "react-router-dom";
 import { useDebouncedCallback } from "use-debounce";
 import {
   Menu,
@@ -9,6 +10,8 @@ import {
   Plus,
   SlidersHorizontal,
   X,
+  LogOut,
+  Upload,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button, Input } from "@/components/ui";
@@ -25,16 +28,22 @@ import {
   useSidebarStore,
   useNoteModalStore,
   useSearchStore,
+  useImportModalStore,
 } from "@/store";
+import { useAuthStore } from "@/store/authStore";
 import { SORT_OPTIONS, DEBOUNCE_DELAY } from "@/constants";
 import { useIsMobile } from "@/hooks";
 import { cn } from "@/lib/utils";
 
 export default function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
   const { isDarkMode, toggleTheme } = useThemeStore();
   const { toggleSidebar, toggleMobileSidebar } = useSidebarStore();
   const { openCreateModal } = useNoteModalStore();
+  const { openModal: openImportModal } = useImportModalStore();
+  const { logout } = useAuthStore();
   const {
     searchQuery,
     selectedSort,
@@ -44,6 +53,15 @@ export default function Header() {
   } = useSearchStore();
   const isMobile = useIsMobile();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const match = matchPath("/folder/:folderId", location.pathname);
+  const currentFolderId = match?.params?.folderId || null;
+
+  const handleLogout = () => {
+    logout();
+    queryClient.clear();
+    navigate("/login");
+  };
 
   const debouncedSetSearch = useDebouncedCallback((value: string) => {
     setSearchQuery(value);
@@ -155,8 +173,28 @@ export default function Header() {
             </AnimatePresence>
           </Button>
 
+          {/* Logout */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLogout}
+            title="Đăng xuất"
+          >
+            <LogOut className="h-5 w-5 text-red-500" />
+          </Button>
+
+          {/* Import button */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => openImportModal(currentFolderId)}
+            title="Nhập (Import)"
+          >
+            <Upload className="h-5 w-5" />
+          </Button>
+
           {/* New note button */}
-          <Button onClick={() => openCreateModal()} className="gap-2">
+          <Button onClick={() => openCreateModal(currentFolderId)} className="gap-2">
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Tạo mới</span>
           </Button>

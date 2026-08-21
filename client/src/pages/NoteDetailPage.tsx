@@ -11,15 +11,26 @@ import {
   Tag,
   Clock,
   Calendar,
+  Sparkles,
+  Download,
+  MoreHorizontal,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import {
   useNote,
   useTogglePin,
   useToggleArchive,
   useDeleteNote,
 } from "@/hooks";
-import { useNoteModalStore } from "@/store";
+import { useNoteModalStore, useSettingsStore } from "@/store";
 import { Button, Badge, LoadingScreen } from "@/components/ui";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/DropdownMenu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +41,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/AlertDialog";
-import { formatSmartDate, linkifyText } from "@/utils";
+import { formatSmartDate, linkifyText, exportAsTxt, exportAsMd } from "@/utils";
 import { cn } from "@/lib/utils";
 
 export default function NoteDetailPage() {
@@ -38,10 +49,12 @@ export default function NoteDetailPage() {
   const navigate = useNavigate();
   const { data: note, isLoading, error } = useNote(id || "");
   const { openEditModal } = useNoteModalStore();
+  const { settings } = useSettingsStore();
   const togglePin = useTogglePin();
   const toggleArchive = useToggleArchive();
   const deleteNote = useDeleteNote();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
 
   if (isLoading) {
     return <LoadingScreen text="Loading note..." />;
@@ -62,6 +75,24 @@ export default function NoteDetailPage() {
     );
   }
 
+  const handleSummarize = async () => {
+    try {
+      setIsSummarizing(true);
+      const { aiApi } = await import("@/api/ai");
+      const res: any = await aiApi.summarizeNote(note._id);
+      if (res.success) {
+        toast.success("AI Summarize success!");
+        // We can just rely on standard React Query invalidation or simple reload
+        // Since useQueryClient isn't directly exposed at the top, reload is easiest for this demo
+        window.location.reload(); 
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to summarize");
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
   const handleDelete = () => {
     setShowDeleteDialog(true);
   };
@@ -72,6 +103,100 @@ export default function NoteDetailPage() {
     });
     setShowDeleteDialog(false);
   };
+
+  const { updateSettings } = useSettingsStore.getState();
+  const pinnedActions = settings.pinnedActions || ["summarize", "edit"];
+
+  const handleTogglePinAction = (actionId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    let currentPinned = [...pinnedActions];
+    
+    if (currentPinned.includes(actionId)) {
+      currentPinned = currentPinned.filter(id => id !== actionId);
+    } else {
+      if (currentPinned.length >= 2) {
+        toast.error("Chỉ được ghim tối đa 2 nút thao tác");
+        return;
+      }
+      currentPinned.push(actionId);
+    }
+    useSettingsStore.getState().updateSettings({ pinnedActions: currentPinned });
+    toast.success("Đã cập nhật ghim nút");
+  };
+
+  const allActions = [
+    {
+      id: "summarize",
+      label: isSummarizing ? "Summarizing..." : "AI Summarize",
+      icon: Sparkles,
+      onClick: handleSummarize,
+      disabled: isSummarizing || note.isAiProcessed,
+      hidden: !settings.aiEnabled,
+      className: "border-purple-500 text-purple-600 hover:bg-purple-50",
+      iconClassName: ""
+    },
+    {
+      id: "edit",
+      label: "Edit",
+      icon: Edit,
+      onClick: () => openEditModal(note),
+      disabled: false,
+      hidden: false,
+      className: "",
+      iconClassName: ""
+    },
+    {
+      id: "pin",
+      label: note.isPinned ? "Unpin" : "Pin",
+      icon: Pin,
+      onClick: () => togglePin.mutate(note._id),
+      disabled: false,
+      hidden: false,
+      className: note.isPinned ? "bg-primary/10 border-primary" : "",
+      iconClassName: note.isPinned ? "fill-current" : ""
+    },
+    {
+      id: "archive",
+      label: note.isArchived ? "Unarchive" : "Archive",
+      icon: Archive,
+      onClick: () => toggleArchive.mutate(note._id),
+      disabled: false,
+      hidden: false,
+      className: "",
+      iconClassName: ""
+    },
+    {
+      id: "txt",
+      label: "Tải TXT",
+      icon: Download,
+      onClick: () => exportAsTxt(note),
+      disabled: false,
+      hidden: false,
+      className: "",
+      iconClassName: ""
+    },
+    {
+      id: "md",
+      label: "Tải Markdown",
+      icon: Download,
+      onClick: () => exportAsMd(note),
+      disabled: false,
+      hidden: false,
+      className: "",
+      iconClassName: ""
+    },
+    {
+      id: "delete",
+      label: "Delete",
+      icon: Trash2,
+      onClick: handleDelete,
+      disabled: false,
+      hidden: false,
+      className: "text-destructive hover:bg-destructive hover:text-destructive-foreground",
+      iconClassName: ""
+    }
+  ];
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -137,46 +262,52 @@ export default function NoteDetailPage() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => openEditModal(note)}
-              className="gap-2"
-            >
-              <Edit className="h-4 w-4" />
-              Edit
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => togglePin.mutate(note._id)}
-              className={cn(
-                "gap-2",
-                note.isPinned && "bg-primary/10 border-primary",
-              )}
-            >
-              <Pin className={cn("h-4 w-4", note.isPinned && "fill-current")} />
-              {note.isPinned ? "Unpin" : "Pin"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toggleArchive.mutate(note._id)}
-              className="gap-2"
-            >
-              <Archive className="h-4 w-4" />
-              {note.isArchived ? "Unarchive" : "Archive"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDelete}
-              className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {allActions
+              .filter(a => (settings.pinnedActions || ["summarize", "edit"]).includes(a.id) && !a.hidden)
+              .map(a => (
+                <Button
+                  key={a.id}
+                  variant="outline"
+                  size="sm"
+                  onClick={a.onClick}
+                  onContextMenu={(e) => handleTogglePinAction(a.id, e)}
+                  disabled={a.disabled}
+                  className={cn("gap-2", a.className)}
+                  title="Chuột phải / Ấn đè để bỏ ghim"
+                >
+                  <a.icon className={cn("h-4 w-4", a.iconClassName)} />
+                  {a.label}
+                </Button>
+              ))}
+
+            {/* More Actions Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="px-2" title="Thêm thao tác">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {allActions
+                  .filter(a => !(settings.pinnedActions || ["summarize", "edit"]).includes(a.id) && !a.hidden)
+                  .map((a, i) => (
+                    <div key={a.id}>
+                      {i === 2 || i === 4 ? <DropdownMenuSeparator /> : null}
+                      <DropdownMenuItem
+                        onClick={a.onClick}
+                        onContextMenu={(e) => handleTogglePinAction(a.id, e)}
+                        disabled={a.disabled}
+                        className={cn(a.id === 'delete' && "text-destructive focus:text-destructive focus:bg-destructive/10")}
+                        title="Chuột phải / Ấn đè để ghim ra ngoài"
+                      >
+                        <a.icon className={cn("h-4 w-4 mr-2", a.iconClassName)} />
+                        {a.label}
+                      </DropdownMenuItem>
+                    </div>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </motion.div>
@@ -208,6 +339,22 @@ export default function NoteDetailPage() {
           </Badge>
         ))}
       </motion.div>
+
+      {/* Summary (if exists) */}
+      {note.summary && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-primary/10 border-l-4 border-primary p-4 rounded-r-lg mb-6"
+        >
+          <div className="flex items-center gap-2 mb-2 font-semibold text-primary">
+            <Sparkles className="h-4 w-4" />
+            AI Summary
+          </div>
+          <p className="text-sm text-foreground/90 whitespace-pre-wrap">{note.summary}</p>
+        </motion.div>
+      )}
 
       {/* Content */}
       <motion.div
