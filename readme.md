@@ -1,16 +1,27 @@
-# 📘 NoteSYS - Advanced Note Management Web App
+# 📘 NoteSYS v2 - Advanced Note Management Web App with AI
 
 > Fullstack Production-Ready Application  
-> **React + TypeScript + Node.js + Express + MongoDB Atlas**  
-> Mobile-first • Scalable • Clean Architecture
+> **React + TypeScript + Node.js + Express + MongoDB Atlas + Supabase (pgvector)**  
+> Mobile-first • Scalable • Clean Architecture • AI-Powered
 
 ---
 
-## 🚀 Tổng Quan
+## 🚀 Tổng Quan (Có gì mới trong v2?)
 
-**NoteSYS** là ứng dụng web quản lý ghi chú hiện đại với kiến trúc fullstack, được thiết kế để hỗ trợ người dùng tổ chức và quản lý ghi chú một cách hiệu quả.
+**NoteSYS v2** là bản nâng cấp lớn của ứng dụng quản lý ghi chú, bổ sung thêm hệ thống tài khoản người dùng, cơ chế bảo mật toàn diện và trợ lý AI thông minh giúp bạn tìm kiếm, tương tác với ghi chú thông qua hội thoại (Chatbot).
 
-### Tính Năng Chính
+### Các Tính Năng Mới Nổi Bật (v2)
+
+| Tính Năng Mới             | Mô Tả                                                      |
+| ------------------------- | ---------------------------------------------------------- |
+| 🤖 **AI Assistant**       | Chatbot AI thông minh (tích hợp Grok/OpenRouter) có khả năng hiểu ngữ cảnh và trả lời câu hỏi dựa trên nội dung ghi chú. |
+| 🔐 **Authentication**     | Đăng ký, đăng nhập an toàn bằng JWT. Hỗ trợ phân quyền người dùng (User/Admin). |
+| 🛡️ **Protected Routes**   | Bảo mật các trang nội bộ, tự động điều hướng người dùng chưa đăng nhập. |
+| 📥 **Import/Export**      | Dễ dàng nhập (Import) và xuất (Export) ghi chú ra định dạng JSON/TXT. |
+| 🌐 **Đa Ngôn Ngữ (i18n)** | Hỗ trợ chuyển đổi ngôn ngữ linh hoạt.                      |
+| 🧠 **Vector Search**      | Tìm kiếm ngữ nghĩa (Semantic Search) sử dụng công nghệ nhúng (Embeddings) lưu trữ trên Supabase (pgvector). |
+
+### Tính Năng Cơ Bản (Kế thừa v1)
 
 | Tính Năng                 | Mô Tả                                                      |
 | ------------------------- | ---------------------------------------------------------- |
@@ -20,31 +31,25 @@
 | ⭐ **Pin & Archive**      | Ghim ghi chú quan trọng, lưu trữ ghi chú cũ                |
 | 🔍 **Full-text Search**   | Tìm kiếm với highlight từ khóa                             |
 | 🌙 **Dark Mode**          | Chế độ tối với nhận diện theme hệ thống                    |
-| 📱 **Responsive**         | Tối ưu cho Mobile, Tablet và Desktop                       |
-| ⚡ **Performance**        | Lazy loading, code splitting, auto-save                    |
-| 📊 **Statistics**         | Trang thống kê trực quan                                   |
-| 🎨 **Dynamic Colors**     | Preview màu động khi tạo note/folder                       |
-| ⌨️ **Keyboard Shortcuts** | Ctrl+K tìm kiếm, Ctrl+N tạo note mới                       |
-| 📤 **Export**             | Xuất ghi chú sang JSON hoặc TXT                            |
 
 ---
 
 ## 🛠️ Tech Stack
 
 ### Backend
-
 - **Runtime:** Node.js 18+
 - **Framework:** Express.js
-- **Database:** MongoDB Atlas + Mongoose
-- **Security:** Helmet, CORS, Rate Limiting, express-validator
+- **Primary Database:** MongoDB Atlas + Mongoose (Lưu trữ dữ liệu chính)
+- **Vector Database:** Supabase + PostgreSQL (pgvector) (Lưu trữ vector cho AI)
+- **AI Integration:** Grok API / OpenRouter (LLM & Embeddings)
+- **Security:** JWT Authentication, Helmet, CORS, Rate Limiting, express-validator
 
 ### Frontend
-
 - **Library:** React 18
 - **Language:** TypeScript
 - **Build Tool:** Vite
 - **Styling:** TailwindCSS + Radix UI
-- **State:** Zustand (UI) + TanStack Query (Server)
+- **State:** Zustand (UI & Auth) + TanStack Query (Server)
 - **Animation:** Framer Motion
 
 ---
@@ -52,209 +57,134 @@
 ## 📦 Cài Đặt Local
 
 ### Yêu Cầu
-
 - Node.js 18+
 - MongoDB Atlas account (hoặc MongoDB local)
+- Supabase account (Database PostgreSQL hỗ trợ pgvector)
 
 ### 1. Clone Repository
-
 ```bash
-git clone <repo-url>
-cd NoteSYS
+git clone https://github.com/TranDucAnh3103/note.git
+cd note
 ```
 
 ### 2. Setup Backend
-
 ```bash
 cd server
 npm install
 ```
 
-Tạo file `.env`:
-
+Tạo file `.env` (dựa trên `.env.example`):
 ```env
 PORT=5000
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/noteapp?retryWrites=true&w=majority
+MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/noteapp?retryWrites=true&w=majority
 JWT_SECRET=your-secret-key
 NODE_ENV=development
+
+# --- AI & Vector DB Config ---
+SUPABASE_HOST=your-supabase-host
+SUPABASE_PORT=5432
+SUPABASE_DB=postgres
+SUPABASE_USER=postgres
+SUPABASE_PASSWORD=your-supabase-password
+
+OPENROUTER_EMBED_KEY=your-openrouter-key
+GROK_API_KEY=your-grok-key
 ```
 
 ### 3. Setup Frontend
-
 ```bash
 cd ../client
 npm install
 ```
 
 Tạo file `.env`:
-
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-### 4. Chạy Ứng Dụng
-
-**Terminal 1 - Backend:**
-
+### 4. Chạy Ứng Dụng bằng Script Tự Động
+Ở thư mục gốc của project, bạn có thể chạy file bat để khởi động cả 2 server cùng lúc (trên Windows):
 ```bash
-cd server
-npm run dev
+start.bat
 ```
-
-**Terminal 2 - Frontend:**
-
-```bash
-cd client
-npm run dev
-```
-
+Hoặc mở 2 terminal chạy lệnh `npm run dev` ở từng thư mục `client` và `server`.
 Mở browser: http://localhost:5173
 
 ---
 
-## 🌐 Deploy Production
+## 🌐 Deploy Production tự động (CI/CD)
 
-### Backend → Render
+Dự án đã được cấu hình sẵn để triển khai tự động (Continuous Deployment) thông qua GitHub.
 
-1. Tạo tài khoản [Render](https://render.com)
-2. New → Web Service
-3. Connect repository, chọn thư mục `server`
-4. Settings:
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-5. Environment Variables:
-   - `NODE_ENV`: `production`
-   - `MONGO_URI`: `<your-mongodb-uri>`
-   - `JWT_SECRET`: `<your-secret>`
-   - `PORT`: `10000`
+### Backend → Render (Tự động)
+Dự án có sẵn file `render.yaml` cấu hình Infrastructure-as-Code:
+1. Truy cập [Render](https://render.com), chọn **New → Blueprint**.
+2. Kết nối tới Repository này.
+3. Render sẽ tự nhận diện toàn bộ cấu hình.
+4. Bạn chỉ cần nhập các biến môi trường nhạy cảm: `MONGO_URI`, các cấu hình `SUPABASE_*` và `API KEY` của AI.
 
-### Frontend → Vercel
+### Frontend → Vercel (Tự động)
+Dự án có sẵn file `vercel.json` phục vụ định tuyến React:
+1. Truy cập [Vercel](https://vercel.com), thêm Project mới.
+2. Import repository này.
+3. Chỉnh sửa **Root Directory** thành thư mục `client`.
+4. Thêm biến môi trường: `VITE_API_URL` bằng URL của backend trên Render (thêm hậu tố `/api`).
+5. Deploy.
 
-1. Tạo tài khoản [Vercel](https://vercel.com)
-2. Import repository, chọn thư mục `client`
-3. Framework Preset: Vite
-4. Environment Variables:
-   - `VITE_API_URL`: `https://your-render-api.onrender.com/api`
-5. Deploy
+Sau khi thiết lập, mọi commit đẩy lên nhánh `main` / `master` sẽ tự động trigger build và deploy bản mới nhất!
 
 ---
 
-## 📁 Cấu Trúc Dự Án
+## 📁 Cấu Trúc Dự Án Mới
 
 ```
 NoteSYS/
 ├── client/                    # Frontend React
 │   ├── src/
-│   │   ├── api/              # API client functions
-│   │   ├── components/       # React components
-│   │   │   ├── layout/       # Layout components
-│   │   │   ├── notes/        # Note-related components
-│   │   │   ├── folders/      # Folder components
-│   │   │   └── ui/           # Reusable UI components
-│   │   ├── hooks/            # Custom React hooks
-│   │   ├── pages/            # Page components
-│   │   ├── store/            # Zustand stores
-│   │   ├── types/            # TypeScript types
-│   │   └── lib/              # Utilities
-│   ├── vercel.json           # Vercel config
+│   │   ├── api/              # Chứa file gọi API (auth.ts, ai.ts...)
+│   │   ├── components/       # Các thành phần UI (có thêm FloatingChat, ProtectRoute...)
+│   │   ├── hooks/            # Custom hooks (có thêm useI18n.ts)
+│   │   ├── pages/            # Trang hiển thị (Login, Register, Admin...)
+│   │   ├── store/            # State management (authStore...)
+│   │   └── utils/            # Tiện ích (importNote, exportNote...)
+│   ├── vercel.json           # Cấu hình deploy Vercel
 │   └── package.json
 │
 ├── server/                    # Backend Node.js
 │   ├── src/
-│   │   ├── config/           # Database config
-│   │   ├── controllers/      # Route controllers
-│   │   ├── middlewares/      # Express middlewares
-│   │   ├── models/           # Mongoose models
-│   │   ├── routes/           # API routes
-│   │   ├── services/         # Business logic
-│   │   ├── validators/       # Request validators
-│   │   └── utils/            # Utilities
-│   ├── render.yaml           # Render config
+│   │   ├── ai/               # AI Agents, Tools, và Providers (Grok, OpenRouter)
+│   │   ├── config/           # Cấu hình DB, Supabase, Môi trường
+│   │   ├── controllers/      # Xử lý logic API (auth, ai, notes...)
+│   │   ├── middlewares/      # Interceptors (xác thực token jwt)
+│   │   ├── models/           # Mongoose schemas (User, Note...)
+│   │   ├── routes/           # Định tuyến API
+│   │   └── services/         # Logic phức tạp (Embedding Service)
+│   ├── migrate-v2.js         # Script đồng bộ dữ liệu v1 sang v2
+│   ├── render.yaml           # Cấu hình tự động deploy Render
 │   └── package.json
 │
+├── start.bat                  # Script chạy nhanh project
 └── readme.md
 ```
 
 ---
 
-## 🔧 NPM Scripts
+## 📱 API Endpoints (Mới trong v2)
 
-### Server
+### Authentication
+- `POST /api/auth/register` - Đăng ký tài khoản
+- `POST /api/auth/login` - Đăng nhập (trả về JWT)
+- `GET /api/auth/me` - Lấy thông tin người dùng hiện tại
 
-| Command            | Mô Tả                                         |
-| ------------------ | --------------------------------------------- |
-| `npm start`        | Chạy production                               |
-| `npm run dev`      | Chạy development với nodemon                  |
-| `npm run seed`     | Tạo dữ liệu mẫu cơ bản                        |
-| `npm run demoseed` | Tạo dữ liệu demo đầy đủ (20 notes, 5 folders) |
-| `npm run clear`    | Xóa tất cả dữ liệu                            |
+### AI Assistant
+- `POST /api/ai/chat` - Gửi tin nhắn cho AI Agent để phân tích, tìm kiếm ghi chú (Sử dụng Grok + Vector Search)
 
-### Client
-
-| Command           | Mô Tả                    |
-| ----------------- | ------------------------ |
-| `npm run dev`     | Chạy development server  |
-| `npm run build`   | Build production         |
-| `npm run preview` | Preview production build |
-| `npm run lint`    | Kiểm tra lỗi ESLint      |
-
----
-
-## 📱 API Endpoints
-
-### Notes
-
-- `GET /api/notes` - Lấy danh sách notes (hỗ trợ pagination, filter)
-- `GET /api/notes/:id` - Lấy note theo ID
-- `POST /api/notes` - Tạo note mới
-- `PUT /api/notes/:id` - Cập nhật note
-- `DELETE /api/notes/:id` - Xóa note
-- `GET /api/notes/tags/all` - Lấy tất cả tags
-- `PUT /api/notes/:id/duplicate` - Nhân bản note
-- `PUT /api/notes/tags/rename` - Đổi tên tag toàn cục
-- `DELETE /api/notes/tags/:tag` - Xóa tag khỏi tất cả notes
-
-### Folders
-
-- `GET /api/folders` - Lấy danh sách folders
-- `GET /api/folders/:id` - Lấy folder theo ID
-- `POST /api/folders` - Tạo folder mới
-- `PUT /api/folders/:id` - Cập nhật folder
-- `DELETE /api/folders/:id` - Xóa folder
-- `PUT /api/folders/reorder` - Sắp xếp lại thứ tự folders
-
----
-
-## ⌨️ Keyboard Shortcuts
-
-| Phím Tắt   | Hành Động          |
-| ---------- | ------------------ |
-| `Ctrl + K` | Mở tìm kiếm        |
-| `Ctrl + N` | Tạo ghi chú mới    |
-| `Escape`   | Đóng modal/sidebar |
-
----
-
-## 🎨 Tính Năng UI/UX
-
-- **Auto-save:** Tự động lưu sau 2 giây ngừng gõ
-- **Toast Notifications:** Thông báo thành công/lỗi
-- **Confirm Dialogs:** Xác nhận trước khi xóa
-- **Copy Protection:** Chặn copy ngoài vùng nội dung note
-- **Compact/Grid View:** Chuyển đổi chế độ hiển thị
-- **Highlight Search:** Tô sáng từ khóa tìm kiếm
-- **Tag Suggestions:** Gợi ý tag khi nhập
-- **Icon Picker:** Chọn icon cho folder
-- **Dynamic Color Preview:** Xem trước màu khi chọn
+*(Các API về Notes, Folders vẫn được giữ nguyên như v1 nhưng được bổ sung Middleware kiểm tra xác thực User)*
 
 ---
 
 ## 📄 License
-
 MIT License - Sử dụng tự do cho mục đích học tập và phát triển.
 
----
-
 ## 👨‍💻 Author
-
-Developed with ❤️ for modern note-taking experience.
+Developed with ❤️ by **TranDucAnh3103** - Cập nhật cho trải nghiệm ghi chú hiện đại & thông minh.
