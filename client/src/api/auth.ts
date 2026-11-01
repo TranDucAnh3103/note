@@ -1,6 +1,7 @@
 import api from "./client";
 
 export const authApi = {
+  sendOtp: (data: any) => api.post("/auth/send-otp", data),
   login: (data: any) => api.post("/auth/login", data),
   register: (data: any) => api.post("/auth/register", data),
   googleLogin: (credential: string) => api.post("/auth/google", { credential }),

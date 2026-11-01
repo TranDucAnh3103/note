@@ -24,6 +24,9 @@ const LoginPage = () => {
       const res: any = await authApi.login({ email, password });
       if (res.success && res.token && res.user) {
         setAuth(res.user, res.token);
+        if (res.refreshToken) {
+          localStorage.setItem("refreshToken", res.refreshToken);
+        }
         toast.success("Đăng nhập thành công!");
         navigate("/");
       } else {
@@ -92,6 +95,9 @@ const LoginPage = () => {
                   const res: any = await authApi.googleLogin(credentialResponse.credential);
                   if (res.success && res.token && res.user) {
                     setAuth(res.user, res.token);
+                    if (res.refreshToken) {
+                      localStorage.setItem("refreshToken", res.refreshToken);
+                    }
                     toast.success("Đăng nhập Google thành công!");
                     navigate("/");
                   }

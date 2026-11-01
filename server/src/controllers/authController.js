@@ -1,19 +1,36 @@
 const User = require('../models/User');
+const RefreshToken = require('../models/RefreshToken');
+const OTP = require('../models/OTP');
 const { asyncHandler } = require('../middlewares');
 const ApiError = require('../utils/ApiError');
 const jwt = require('jsonwebtoken');
 const config = require('../config');
+const { validationResult } = require('express-validator');
+const sendEmail = require('../services/emailService');
 
 // Get token from model, create cookie and send response
-const sendTokenResponse = (user, statusCode, res) => {
-  // Create token
+const sendTokenResponse = async (user, statusCode, res) => {
+  // Create access token
   const token = jwt.sign({ id: user._id }, config.jwtSecret, {
-    expiresIn: '30d',
+    expiresIn: '1h',
+  });
+
+  // Create refresh token
+  const refreshToken = jwt.sign({ id: user._id }, config.jwtRefreshSecret, {
+    expiresIn: '7d',
+  });
+
+  // Save refresh token to db
+  await RefreshToken.create({
+    token: refreshToken,
+    userId: user._id,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   });
 
   res.status(statusCode).json({
     success: true,
     token,
+    refreshToken,
     user: {
       _id: user._id,
       username: user.username,
@@ -23,11 +40,63 @@ const sendTokenResponse = (user, statusCode, res) => {
   });
 };
 
+// @desc    Send OTP to email
+// @route   POST /api/auth/send-otp
+// @access  Public
+exports.sendOtp = asyncHandler(async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(new ApiError(errors.array()[0].msg, 400));
+  }
+
+  const { email } = req.body;
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    return next(new ApiError('Email already exists', 400));
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
+
+  // Delete any existing OTP for this email
+  await OTP.deleteMany({ email });
+
+  await OTP.create({
+    email,
+    otp
+  });
+
+  const message = `Mã OTP xác thực của bạn là: ${otp}. Mã này sẽ hết hạn sau 5 phút.`;
+
+  try {
+    await sendEmail({
+      email,
+      subject: 'Mã OTP xác thực đăng ký',
+      message
+    });
+
+    res.status(200).json({ success: true, message: 'Mã OTP đã được gửi về email của bạn' });
+  } catch (err) {
+    console.log(err);
+    return next(new ApiError('Không thể gửi email OTP', 500));
+  }
+});
+
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
 exports.register = asyncHandler(async (req, res, next) => {
-  const { username, email, password } = req.body;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(new ApiError(errors.array()[0].msg, 400));
+  }
+
+  const { username, email, password, otp } = req.body;
+
+  // Verify OTP
+  const otpRecord = await OTP.findOne({ email, otp });
+  if (!otpRecord) {
+    return next(new ApiError('Mã OTP không hợp lệ hoặc đã hết hạn', 400));
+  }
 
   // Check if user already exists
   const existingUser = await User.findOne({ $or: [{ email }, { username }] });
@@ -43,6 +112,9 @@ exports.register = asyncHandler(async (req, res, next) => {
     password,
   });
 
+  // Delete OTP after successful registration
+  await OTP.deleteMany({ email });
+
   // Create default folders
   const Folder = require('../models/Folder');
   const defaultFolders = [
@@ -54,19 +126,19 @@ exports.register = asyncHandler(async (req, res, next) => {
   ];
   await Folder.insertMany(defaultFolders);
 
-  sendTokenResponse(user, 201, res);
+  await sendTokenResponse(user, 201, res);
 });
 
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
 exports.login = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body;
-
-  // Validate email & password
-  if (!email || !password) {
-    return next(new ApiError('Please provide an email and password', 400));
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(new ApiError(errors.array()[0].msg, 400));
   }
+
+  const { email, password } = req.body;
 
   // Check for user
   const user = await User.findOne({ email }).select('+password');
@@ -86,7 +158,62 @@ exports.login = asyncHandler(async (req, res, next) => {
     return next(new ApiError('Your account has been blocked', 403));
   }
 
-  sendTokenResponse(user, 200, res);
+  await sendTokenResponse(user, 200, res);
+});
+
+// @desc    Refresh Token
+// @route   POST /api/auth/refresh-token
+// @access  Public
+exports.refreshToken = asyncHandler(async (req, res, next) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return next(new ApiError('Refresh token is required', 400));
+  }
+
+  // Find token in db
+  const tokenDoc = await RefreshToken.findOne({ token: refreshToken });
+  if (!tokenDoc) {
+    return next(new ApiError('Invalid refresh token', 401));
+  }
+
+  // Verify token
+  try {
+    const decoded = jwt.verify(refreshToken, config.jwtRefreshSecret);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return next(new ApiError('User no longer exists', 401));
+    }
+
+    if (user.status === 'BLOCKED') {
+      return next(new ApiError('Your account has been blocked', 403));
+    }
+
+    // Generate new access token
+    const token = jwt.sign({ id: user._id }, config.jwtSecret, {
+      expiresIn: '1h',
+    });
+
+    res.status(200).json({
+      success: true,
+      token
+    });
+  } catch (err) {
+    await RefreshToken.deleteOne({ token: refreshToken });
+    return next(new ApiError('Refresh token expired', 401));
+  }
+});
+
+// @desc    Logout user
+// @route   POST /api/auth/logout
+// @access  Private
+exports.logout = asyncHandler(async (req, res, next) => {
+  const { refreshToken } = req.body;
+  if (refreshToken) {
+    await RefreshToken.deleteOne({ token: refreshToken });
+  }
+  res.status(200).json({ success: true, message: 'Logged out successfully' });
 });
 
 // @desc    Get current logged in user
@@ -151,7 +278,7 @@ exports.googleLogin = asyncHandler(async (req, res, next) => {
     await Folder.insertMany(defaultFolders);
   }
 
-  sendTokenResponse(user, 200, res);
+  await sendTokenResponse(user, 200, res);
 });
 
 // @desc    Update user AI config

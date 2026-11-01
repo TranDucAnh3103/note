@@ -9,11 +9,13 @@ const RegisterPage = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !email || !password) {
       toast.error("Vui lòng nhập đầy đủ thông tin");
@@ -22,9 +24,34 @@ const RegisterPage = () => {
 
     try {
       setLoading(true);
-      const res: any = await authApi.register({ username, email, password });
+      const res: any = await authApi.sendOtp({ email });
+      if (res.success) {
+        toast.success(res.message || "Mã OTP đã được gửi!");
+        setStep(2);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Không thể gửi OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp) {
+      toast.error("Vui lòng nhập mã OTP");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res: any = await authApi.register({ username, email, password, otp });
       if (res.success && res.token && res.user) {
         setAuth(res.user, res.token);
+        // Also save refreshToken if needed in the future
+        if (res.refreshToken) {
+          localStorage.setItem("refreshToken", res.refreshToken);
+        }
         toast.success("Đăng ký thành công!");
         navigate("/");
       }
@@ -43,46 +70,79 @@ const RegisterPage = () => {
           <p className="text-sm text-muted-foreground mt-2">Tạo tài khoản mới</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Tên hiển thị</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </div>
+        {step === 1 ? (
+          <form onSubmit={handleSendOtp} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tên hiển thị</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              placeholder="name@example.com"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Mật khẩu</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="name@example.com"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mật khẩu</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full h-10 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            {loading ? "Đang xử lý..." : "Đăng ký"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-10 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {loading ? "Đang xử lý..." : "Gửi mã OTP"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mã OTP</label>
+              <input
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Nhập mã 6 chữ số"
+              />
+              <p className="text-xs text-muted-foreground">
+                Mã OTP đã được gửi đến email {email}
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-10 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {loading ? "Đang xử lý..." : "Hoàn tất đăng ký"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="w-full h-10 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 mt-2"
+            >
+              Quay lại
+            </button>
+          </form>
+        )}
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
@@ -101,6 +161,9 @@ const RegisterPage = () => {
                   const res: any = await authApi.googleLogin(credentialResponse.credential);
                   if (res.success && res.token && res.user) {
                     setAuth(res.user, res.token);
+                    if (res.refreshToken) {
+                      localStorage.setItem("refreshToken", res.refreshToken);
+                    }
                     toast.success("Đăng nhập Google thành công!");
                     navigate("/");
                   }

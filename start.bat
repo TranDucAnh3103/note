@@ -3,17 +3,14 @@ echo ==========================================
 echo       MEMOSTACK V2 - STARTING SYSTEM
 echo ==========================================
 echo.
-
-echo [1/2] Starting Backend Server (Node.js/Express)...
-start "MemoStack Backend" cmd /k "cd server && npm run dev"
-
-echo [2/2] Starting Frontend Client (React/Vite)...
-start "MemoStack Frontend" cmd /k "cd client && npm run dev"
-
+echo Starting Hidden Dashboard on Port 8080...
+echo All processes will run entirely in the background (no CMD windows).
 echo.
-echo ==========================================
-echo Servers are running in separate windows!
-echo Backend: http://localhost:5001
-echo Frontend: http://localhost:5173
-echo ==========================================
-echo You can close this window.
+echo Opening browser to http://localhost:8080...
+start http://localhost:8080
+
+:: Run the dashboard silently via VBScript
+cscript //nologo start-hidden.vbs
+
+:: Exit this script and close the terminal
+exit

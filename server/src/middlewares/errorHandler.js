@@ -9,7 +9,11 @@ const errorHandler = (err, req, res, next) => {
 
   // Log error for debugging
   if (config.nodeEnv === 'development') {
-    console.error('Error:', err);
+    if (err.statusCode === 401 || err.statusCode === 404) {
+      console.error(`[${err.statusCode}] ${err.message}`);
+    } else {
+      console.error('Error:', err);
+    }
   }
 
   // Mongoose bad ObjectId

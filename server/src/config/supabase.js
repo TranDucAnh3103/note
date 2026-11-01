@@ -12,6 +12,11 @@ const pool = new Pool({
 
 // Initialize vector extension and table if not exists
 const initDb = async () => {
+  if (!config.supabase.host) {
+    console.log('⚠️ Supabase host not configured, skipping vector DB initialization.');
+    return;
+  }
+  
   try {
     const client = await pool.connect();
     console.log('📦 Connected to Supabase PostgreSQL');

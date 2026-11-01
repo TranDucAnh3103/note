@@ -23,6 +23,9 @@ initDb();
 
 const app = express();
 
+// Trust proxy for Reverse Proxy (Nginx / Cloudflare Tunnel)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 

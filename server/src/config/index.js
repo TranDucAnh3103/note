@@ -5,8 +5,13 @@ module.exports = {
   port: process.env.PORT || 5000,
   mongoUri: process.env.MONGO_URI,
   jwtSecret: process.env.JWT_SECRET || 'default-secret-key',
+  jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || 'default-refresh-secret-key',
   nodeEnv: process.env.NODE_ENV || 'development',
-  corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'],
+  email: {
+    user: process.env.EMAIL_USER || 'jonh',
+    pass: process.env.EMAIL_PASS || 'obmfifcvenlomxvh'
+  },
+  corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'],
   rateLimit: {
     windowMs: 1 * 60 * 1000, // 1 phút
     max: 200, // 200 requests/phút - đủ cho CRUD bình thường

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MemoStack Console</title>
+  <style>
+    :root {
+      --bg: #000000;
+      --fg: #ffffff;
+      --border: #333333;
+      --accent-yellow: #f1c40f;
+      --accent-red: #e74c3c;
+      --bg-panel: #111111;
+      --button-bg: #222222;
+      --success: #2ecc71;
+    }
+    
+    * { box-sizing: border-box; }
+    
+    body {
+      margin: 0; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg); 
+      color: var(--fg);
+      display: flex; 
+      flex-direction: column; 
+      height: 100vh; 
+      overflow: hidden;
+    }
+    
+    /* Header */
+    header {
+      padding: 1rem 1.5rem; 
+      border-bottom: 1px solid var(--border);
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      background-color: var(--bg-panel);
+    }
+    h1 { margin: 0; font-size: 1.2rem; color: var(--accent-yellow); font-weight: bold; letter-spacing: 1px; }
+    
+    .controls { display: flex; gap: 1rem; align-items: center; }
+    button {
+      background: var(--button-bg); color: var(--fg); border: 1px solid var(--border);
+      padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; font-weight: 500;
+      transition: all 0.2s;
+    }
+    button:hover { background: #333; }
+    
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: bold;
+      padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border);
+    }
+    .status-badge.running { border-color: var(--success); color: var(--success); }
+    .status-badge.running .dot { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+    .status-badge.stopped { border-color: var(--accent-red); color: var(--accent-red); }
+    .status-badge.stopped .dot { background-color: var(--accent-red); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); background-color: var(--bg-panel); padding: 0 1rem; }
+    .tab { padding: 12px 24px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 600; font-size: 0.95rem; }
+    .tab.active { border-bottom-color: var(--accent-yellow); color: var(--accent-yellow); }
+    .tab:hover:not(.active) { color: #ccc; }
+    
+    .view { display: none; flex: 1; overflow: hidden; }
+    .view.active { display: flex; }
+    
+    /* Logs View */
+    .panel { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+    .panel:last-child { border-right: none; }
+    .panel-header { 
+      padding: 0.75rem 1rem; background-color: var(--bg-panel); 
+      border-bottom: 1px solid var(--border); font-weight: bold; 
+      display: flex; justify-content: space-between; align-items: center;
+      color: var(--accent-yellow);
+    }
+    .logs { 
+      flex: 1; overflow-y: auto; padding: 1rem; font-size: 0.85rem; 
+      font-family: 'Consolas', 'Courier New', monospace; white-space: pre-wrap; word-wrap: break-word; 
+    }
+    .log-line { margin: 2px 0; line-height: 1.4; border-bottom: 1px solid #1a1a1a; padding-bottom: 2px; }
+    .log-line:hover { background-color: #111; }
+    .log-line.error { color: var(--accent-red); }
+    .log-line.system { color: var(--accent-yellow); font-style: italic; }
+
+    /* API Tester View */
+    #view-api { display: none; flex-direction: row; }
+    
+    /* Sidebar */
+    .api-sidebar { width: 280px; border-right: 1px solid var(--border); background: var(--bg-panel); overflow-y: auto; padding: 1rem 0; }
+    .api-group { margin-bottom: 1rem; }
+    .api-group-title { padding: 0.5rem 1rem; font-size: 0.85rem; text-transform: uppercase; color: #888; font-weight: bold; letter-spacing: 1px;}
+    .api-item { 
+      padding: 0.6rem 1rem; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;
+      border-left: 3px solid transparent; transition: 0.2s;
+    }
+    .api-item:hover { background: #222; }
+    .api-item.active { background: #222; border-left-color: var(--accent-yellow); color: var(--accent-yellow); font-weight: bold; }
+    
+    .method-badge { font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 3px; min-width: 45px; text-align: center; }
+    .method-badge.get { background: #2980b9; color: white; }
+    .method-badge.post { background: var(--accent-yellow); color: black; }
+    .method-badge.put { background: #e67e22; color: white; }
+    .method-badge.delete { background: var(--accent-red); color: white; }
+
+    /* Main Content */
+    .api-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    
+    .api-config { padding: 1.5rem; border-bottom: 1px solid var(--border); background: var(--bg); }
+    
+    .api-auth-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; padding: 1rem; background: #1a1a1a; border-radius: 6px; border: 1px dashed var(--border); }
+    .api-auth-bar label { font-weight: bold; color: var(--accent-yellow); }
+    
+    .api-row { display: flex; gap: 10px; margin-bottom: 1rem; }
+    select, input, textarea { 
+      background: #111; color: var(--fg); border: 1px solid var(--border);
+      padding: 10px; border-radius: 4px; font-family: 'Consolas', monospace; outline: none;
+    }
+    select:focus, input:focus, textarea:focus { border-color: var(--accent-yellow); }
+    
+    select { width: 110px; font-weight: bold; }
+    input { flex: 1; }
+    textarea { width: 100%; height: 120px; resize: vertical; margin-bottom: 1rem; }
+    
+    .btn-send { background: var(--accent-yellow); color: #000; font-weight: bold; font-size: 1rem; padding: 0 2rem; border-color: var(--accent-yellow); }
+    .btn-send:hover { background: #f39c12; }
+    
+    .api-body-section { display: flex; flex-direction: column; }
+    
+    /* Response Area */
+    .api-response-container { flex: 1; display: flex; flex-direction: column; padding: 1.5rem; overflow: hidden; background: var(--bg-panel); }
+    .api-response-header { display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: center; }
+    .api-response-header h3 { margin: 0; color: var(--accent-yellow); }
+    
+    .response-area { 
+      flex: 1; padding: 1rem; background: #000; border: 1px solid var(--border); border-radius: 4px; 
+      overflow: auto; white-space: pre-wrap; font-family: 'Consolas', monospace; font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>MEMOSTACK CONSOLE</h1>
+      <div style="margin-top:5px; font-size:0.8rem; color:#888;">PORT 8080 - SILENT MODE</div>
+    </div>
+    <div class="controls">
+      <div class="status-badge running" id="status-backend">
+        <div class="dot"></div> BE
+        <button onclick="toggleProcess('backend')">Stop</button>
+      </div>
+      <div class="status-badge running" id="status-frontend">
+        <div class="dot"></div> FE
+        <button onclick="toggleProcess('frontend')">Stop</button>
+      </div>
+      <button onclick="stopDashboard()" style="border-color:var(--accent-red); color:var(--accent-red)">Shutdown System</button>
+    </div>
+  </header>
+  
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('logs')">Live Logs</div>
+    <div class="tab" onclick="switchTab('api')">API Tester</div>
+  </div>
+
+  <!-- Logs View -->
+  <div id="view-logs" class="view active">
+    <div class="panel">
+      <div class="panel-header">
+        <span>[ BACKEND ] localhost:5001</span>
+        <button onclick="clearLogs('backend')">Clear</button>
+      </div>
+      <div id="backend-logs" class="logs"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <span>[ FRONTEND ] localhost:5173</span>
+        <button onclick="clearLogs('frontend')">Clear</button>
+      </div>
+      <div id="frontend-logs" class="logs"></div>
+    </div>
+  </div>
+
+  <!-- API Tester View -->
+  <div id="view-api" class="view">
+    
+    <div class="api-sidebar" id="api-sidebar">
+      <!-- Generated by JS -->
+    </div>
+    
+    <div class="api-content">
+      <div class="api-config">
+        <div class="api-auth-bar">
+          <label>Global Auth Token (Bearer):</label>
+          <input type="text" id="global-token" placeholder="Paste your JWT token here to authenticate requests..." />
+        </div>
+        
+        <div class="api-row">
+          <select id="api-method">
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+          <input type="text" id="api-url" value="http://localhost:5001/api/health" placeholder="URL..." />
+          <button class="btn-send" onclick="sendApiRequest()">SEND</button>
+        </div>
+        
+        <div class="api-body-section" id="api-body-section" style="display:none;">
+          <label style="display:block; margin-bottom:8px; font-size:0.9rem; color:var(--accent-yellow); font-weight:bold;">Request Body (JSON)</label>
+          <textarea id="api-body">{}</textarea>
+        </div>
+      </div>
+      
+      <div class="api-response-container">
+        <div class="api-response-header">
+          <h3>Response</h3>
+          <div id="res-status" style="font-weight:bold; font-size:1.1rem;"></div>
+        </div>
+        <div class="response-area" id="api-response">Hit Send to get response...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Tab switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+      event.target.classList.add('active');
+      document.getElementById('view-' + tabId).style.display = 'flex';
+    }
+
+    // Logs logic
+    const backendLogs = document.getElementById('backend-logs');
+    const frontendLogs = document.getElementById('frontend-logs');
+
+    function appendLog(source, line) {
+      const container = source === 'backend' ? backendLogs : frontendLogs;
+      const div = document.createElement('div');
+      div.className = 'log-line';
+      if (line.includes('[ERROR]') || line.includes('Error:') || line.toLowerCase().includes('failed')) {
+        div.classList.add('error');
+      }
+      if (line.includes('[SYSTEM]')) div.classList.add('system');
+      
+      div.textContent = line;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    fetch('/api/dashboard/initial')
+      .then(r => r.json())
+      .then(data => {
+        data.logs.backend.forEach(l => appendLog('backend', l));
+        data.logs.frontend.forEach(l => appendLog('frontend', l));
+        updateStatusUI('backend', data.status.backend);
+        updateStatusUI('frontend', data.status.frontend);
+      });
+
+    const eventSource = new EventSource('/api/dashboard/stream');
+    eventSource.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      if (data.type === 'log') {
+        appendLog(data.source, data.line);
+      } else if (data.type === 'status') {
+        updateStatusUI(data.source, data.status);
+      }
+    };
+
+    function clearLogs(source) {
+      if (source === 'backend') backendLogs.innerHTML = '';
+      if (source === 'frontend') frontendLogs.innerHTML = '';
+    }
+
+    // Process Control
+    function updateStatusUI(type, status) {
+      const el = document.getElementById('status-' + type);
+      const btn = el.querySelector('button');
+      if (status === 'running') {
+        el.className = 'status-badge running';
+        btn.textContent = 'Stop';
+      } else {
+        el.className = 'status-badge stopped';
+        btn.textContent = 'Start';
+      }
+    }
+
+    function toggleProcess(type) {
+      const el = document.getElementById('status-' + type);
+      const isRunning = el.classList.contains('running');
+      
+      // Visual feedback immediately
+      if (isRunning) {
+        el.className = 'status-badge stopped';
+        el.querySelector('button').textContent = 'Start';
+      } else {
+        el.className = 'status-badge running';
+        el.querySelector('button').textContent = 'Stop';
+      }
+
+      fetch('/api/dashboard/process/' + type, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: isRunning ? 'stop' : 'start' })
+      });
+    }
+
+    function stopDashboard() {
+      if(confirm("Tắt Dashboard sẽ đóng luôn ngầm Backend và Frontend. Chắc chắn chứ?")) {
+        fetch('/api/dashboard/shutdown', { method: 'POST' }).then(() => {
+          document.body.innerHTML = "<h1 style='text-align:center; margin-top:20vh; color:var(--accent-red)'>SYSTEM SHUTDOWN SUCCESSFUL.<br/>You can close this tab.</h1>";
+        });
+      }
+    }
+
+    // --- API TESTER LOGIC ---
+    const endpoints = [
+      {
+        group: "System",
+        items: [
+          { name: "Health Check", method: "GET", path: "/api/health", body: null }
+        ]
+      },
+      {
+        group: "Auth",
+        items: [
+          { name: "Send OTP", method: "POST", path: "/api/auth/send-otp", body: '{\n  "email": "test@example.com"\n}' },
+          { name: "Register", method: "POST", path: "/api/auth/register", body: '{\n  "username": "tester",\n  "email": "test@example.com",\n  "password": "password123",\n  "otp": "123456"\n}' },
+          { name: "Login", method: "POST", path: "/api/auth/login", body: '{\n  "email": "test@example.com",\n  "password": "password123"\n}' },
+          { name: "Get Me (Token req)", method: "GET", path: "/api/auth/me", body: null }
+        ]
+      },
+      {
+        group: "Folders",
+        items: [
+          { name: "Get All Folders", method: "GET", path: "/api/folders", body: null },
+          { name: "Create Folder", method: "POST", path: "/api/folders", body: '{\n  "name": "My New Folder",\n  "color": "#ff0000"\n}' }
+        ]
+      },
+      {
+        group: "Notes",
+        items: [
+          { name: "Get All Notes", method: "GET", path: "/api/notes", body: null },
+          { name: "Create Note", method: "POST", path: "/api/notes", body: '{\n  "title": "New Note",\n  "content": "<p>Hello</p>",\n  "folderId": "YOUR_FOLDER_ID"\n}' }
+        ]
+      }
+    ];
+
+    const sidebar = document.getElementById('api-sidebar');
+    const methodSelect = document.getElementById('api-method');
+    const urlInput = document.getElementById('api-url');
+    const bodySection = document.getElementById('api-body-section');
+    const bodyInput = document.getElementById('api-body');
+
+    // Auto show/hide body textarea based on method
+    methodSelect.addEventListener('change', (e) => {
+      const method = e.target.value;
+      if (method === 'GET' || method === 'DELETE') {
+        bodySection.style.display = 'none';
+      } else {
+        bodySection.style.display = 'flex';
+      }
+    });
+
+    function selectEndpoint(el, item) {
+      document.querySelectorAll('.api-item').forEach(e => e.classList.remove('active'));
+      el.classList.add('active');
+      
+      methodSelect.value = item.method;
+      urlInput.value = "http://localhost:5001" + item.path;
+      
+      if (item.method === 'GET' || item.method === 'DELETE') {
+        bodySection.style.display = 'none';
+      } else {
+        bodySection.style.display = 'flex';
+        bodyInput.value = item.body || '{}';
+      }
+    }
+
+    // Render Sidebar
+    endpoints.forEach(group => {
+      const gDiv = document.createElement('div');
+      gDiv.className = 'api-group';
+      
+      const gTitle = document.createElement('div');
+      gTitle.className = 'api-group-title';
+      gTitle.textContent = group.group;
+      gDiv.appendChild(gTitle);
+
+      group.items.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'api-item';
+        
+        const badge = document.createElement('span');
+        badge.className = 'method-badge ' + item.method.toLowerCase();
+        badge.textContent = item.method;
+
+        const name = document.createElement('span');
+        name.textContent = item.name;
+
+        itemDiv.appendChild(badge);
+        itemDiv.appendChild(name);
+        
+        itemDiv.onclick = () => selectEndpoint(itemDiv, item);
+        gDiv.appendChild(itemDiv);
+      });
+      
+      sidebar.appendChild(gDiv);
+    });
+
+    async function sendApiRequest() {
+      const method = methodSelect.value;
+      const url = urlInput.value;
+      const token = document.getElementById('global-token').value.trim();
+      const bodyStr = bodyInput.value;
+      
+      const resArea = document.getElementById('api-response');
+      const resStatus = document.getElementById('res-status');
+
+      resArea.textContent = "Loading...";
+      resArea.style.color = "var(--fg)";
+      resStatus.textContent = "";
+      
+      let headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = "Bearer " + token;
+      }
+      
+      let body = null;
+      if (method !== 'GET' && method !== 'DELETE') {
+        try { 
+          const parsed = JSON.parse(bodyStr); 
+          body = JSON.stringify(parsed); 
+        } catch(e) { 
+          resArea.textContent = "Error: Invalid JSON Body!";
+          resArea.style.color = "var(--accent-red)";
+          return;
+        }
+      }
+
+      try {
+        const response = await fetch(url, { method, headers, body });
+        resStatus.textContent = response.status + " " + response.statusText;
+        resStatus.style.color = response.ok ? "var(--success)" : "var(--accent-red)";
+        
+        const text = await response.text();
+        try {
+          const json = JSON.parse(text);
+          resArea.textContent = JSON.stringify(json, null, 2);
+          
+          // Auto fill token if login successful
+          if (url.includes('/login') || url.includes('/register')) {
+            if (json.token) {
+              document.getElementById('global-token').value = json.token;
+            }
+          }
+        } catch {
+          resArea.textContent = text || "(Empty response)";
+        }
+      } catch (err) {
+        resStatus.textContent = "Network Error";
+        resStatus.style.color = "var(--accent-red)";
+        resArea.textContent = err.message;
+      }
+    }
+  </script>
+</body>
+</html>
